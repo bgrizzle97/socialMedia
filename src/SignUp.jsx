@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { ArrowLeft, User, Mail, Lock, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
+import { useUser } from './UserContext';
 
 function SignUp({ onNavigate }) {
+  const { setUser } = useUser();
   const [formData, setFormData] = useState({
     username: "",
     email: "",
@@ -48,12 +50,9 @@ function SignUp({ onNavigate }) {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage({ type: "success", text: "Account created successfully! Redirecting..." });
-        
-        // Store user data and token in localStorage
-        localStorage.setItem('user', JSON.stringify(data.user));
+        setMessage({ type: "success", text: "Signup successful! Redirecting..." });
+        setUser(data.user);
         localStorage.setItem('token', data.token);
-        
         setTimeout(() => {
           onNavigate('/dashboard');
         }, 2000);

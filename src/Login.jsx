@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
+import { useUser } from './UserContext';
 
 function Login({ onNavigate }) {
+  const { setUser } = useUser();
   const [formData, setFormData] = useState({
     email: "",
     password: ""
@@ -40,7 +42,7 @@ function Login({ onNavigate }) {
         setMessage({ type: "success", text: "Login successful! Redirecting..." });
         
         // Store user data and token in localStorage
-        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser(data.user);
         localStorage.setItem('token', data.token);
         
         setTimeout(() => {
@@ -62,6 +64,10 @@ function Login({ onNavigate }) {
 
   const handleGoToSignUp = () => {
     onNavigate('/signup');
+  };
+
+  const handleGoToResetPassword = () => {
+    onNavigate('/reset-password');
   };
 
   return (
@@ -134,6 +140,14 @@ function Login({ onNavigate }) {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              <button
+                type="button"
+                onClick={handleGoToResetPassword}
+                className="mt-2 text-sm text-yellow-300 hover:text-yellow-200 underline focus:outline-none"
+                style={{ float: 'right' }}
+              >
+                Forgot password?
+              </button>
             </div>
 
             <button

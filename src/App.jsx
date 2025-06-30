@@ -6,6 +6,10 @@ import LandingPage from './LandingPage';
 import SpiralTransition from './components/SpiralTransition';
 import Dashboard from './Dashboard';
 import Login from './Login';
+import ProfileSettings from './ProfileSettings';
+import ResetPassword from './ResetPassword';
+import SetNewPassword from './SetNewPassword';
+import { UserProvider } from './UserContext';
 
 const features = [
   {
@@ -67,6 +71,18 @@ const AppContent = () => {
           path="/dashboard" 
           element={<Dashboard onNavigate={handleNavigation} />} 
         />
+        <Route 
+          path="/profile-settings" 
+          element={<ProfileSettings onNavigate={handleNavigation} />} 
+        />
+        <Route
+          path="/reset-password"
+          element={<ResetPassword onNavigate={handleNavigation} />}
+        />
+        <Route
+          path="/set-new-password"
+          element={<SetNewPassword onNavigate={handleNavigation} />}
+        />
       </Routes>
     </div>
   );
@@ -74,9 +90,11 @@ const AppContent = () => {
 
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <UserProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </UserProvider>
   );
 }
 

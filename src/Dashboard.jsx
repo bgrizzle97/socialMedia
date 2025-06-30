@@ -14,9 +14,10 @@ import {
   Bookmark,
   TrendingUp
 } from "lucide-react";
+import { useUser } from './UserContext';
 
 function Dashboard({ onNavigate }) {
-  const [user, setUser] = useState(null);
+  const { user, setUser } = useUser();
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState("");
   const [isPosting, setIsPosting] = useState(false);
@@ -31,15 +32,11 @@ function Dashboard({ onNavigate }) {
   const BACKEND_URL = "http://localhost:5000";
 
   useEffect(() => {
-    // Get user data from localStorage (set during login/signup)
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    } else {
-      // If no user data, redirect to home
+    // Remove localStorage logic for user
+    if (!user) {
       onNavigate('/');
     }
-  }, [onNavigate]);
+  }, [user, onNavigate]);
 
   // Fetch posts from backend
   const fetchPosts = async () => {
@@ -50,8 +47,7 @@ function Dashboard({ onNavigate }) {
       if (response.ok) {
         setPosts(data.posts.map(post => ({
           ...post,
-          shares: 0, // default shares
-          avatar: post.avatar || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50&h=50&fit=crop&crop=face"
+          shares: 0 // default shares
         })));
       }
     } catch (err) {
@@ -242,12 +238,15 @@ function Dashboard({ onNavigate }) {
           <div className="lg:col-span-1">
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-purple-500/20 p-6 mb-6 shadow-xl">
               <div className="flex items-center space-x-3 mb-4">
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
-                  <User className="w-6 h-6 text-white" />
-                </div>
+                {console.log('Sidebar user:', user)}
+                <img
+                  src={user && user.profilePic ? (user.profilePic.startsWith('http') ? user.profilePic : BACKEND_URL + user.profilePic) : "https://ui-avatars.com/api/?name=User&background=random"}
+                  alt="Profile"
+                  className="w-12 h-12 rounded-full object-cover border-2 border-purple-500/30 shadow-lg"
+                />
                 <div>
-                  <h3 className="font-semibold text-white">@{user.username}</h3>
-                  <p className="text-sm text-gray-300">{user.email}</p>
+                  <h3 className="font-semibold text-white">@{user && (user.username || user.fullName) ? (user.username || user.fullName) : 'User'}</h3>
+                  <p className="text-sm text-gray-300">{user && user.email ? user.email : ''}</p>
                 </div>
               </div>
               
@@ -276,7 +275,7 @@ function Dashboard({ onNavigate }) {
           <div className="lg:col-span-2">
             {/* Welcome Message */}
             <div className="bg-gradient-to-r from-purple-600/80 to-pink-600/80 backdrop-blur-sm rounded-xl p-6 mb-6 border border-purple-400/30 shadow-xl">
-              <h2 className="text-2xl font-bold mb-2">Welcome back, @{user.username}! 👋</h2>
+              <h2 className="text-2xl font-bold mb-2">Welcome back, @{user && (user.username || user.fullName) ? (user.username || user.fullName) : 'User'}! 👋</h2>
               <p className="text-purple-100">Ready to connect with your friends and share your thoughts?</p>
             </div>
 
@@ -289,9 +288,11 @@ function Dashboard({ onNavigate }) {
             >
               <form onSubmit={handlePostSubmit} encType="multipart/form-data">
                 <div className="flex items-start space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-lg">
-                    <User className="w-5 h-5 text-white" />
-                  </div>
+                  <img
+                    src={user && user.profilePic ? (user.profilePic.startsWith('http') ? user.profilePic : BACKEND_URL + user.profilePic) : "https://ui-avatars.com/api/?name=User&background=random"}
+                    alt="Profile"
+                    className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/30 shadow-lg"
+                  />
                   <div className="flex-1">
                     <textarea
                       placeholder="What's on your mind?"
@@ -356,13 +357,13 @@ function Dashboard({ onNavigate }) {
                 <div key={post.id} className="bg-gray-800/50 backdrop-blur-sm rounded-xl border border-purple-500/20 p-6 shadow-xl">
                   <div className="flex items-start space-x-3 mb-4">
                     <img 
-                      src={post.avatar} 
-                      alt={post.username}
+                      src={post.userId && post.userId.profilePic ? (post.userId.profilePic.startsWith('http') ? post.userId.profilePic : BACKEND_URL + post.userId.profilePic) : "https://ui-avatars.com/api/?name=User&background=random"}
+                      alt={post.userId ? post.userId.fullName : 'User'}
                       className="w-10 h-10 rounded-full object-cover border-2 border-purple-500/30"
                     />
                     <div className="flex-1">
                       <div className="flex items-center space-x-2">
-                        <h3 className="font-semibold text-white">@{post.username}</h3>
+                        <h3 className="font-semibold text-white">@{post.userId ? post.userId.fullName : 'User'}</h3>
                         <span className="text-gray-400 text-sm">•</span>
                         <span className="text-gray-400 text-sm">{new Date(post.timestamp).toLocaleString()}</span>
                       </div>
@@ -460,6 +461,13 @@ function Dashboard({ onNavigate }) {
                 </div>
               </div>
             </div>
+
+            <button
+              className="mb-4 px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+              onClick={() => onNavigate('/profile-settings')}
+            >
+              Profile Settings
+            </button>
           </div>
         </div>
       </div>
