@@ -9,7 +9,8 @@ import Login from './Login';
 import ProfileSettings from './ProfileSettings';
 import ResetPassword from './ResetPassword';
 import SetNewPassword from './SetNewPassword';
-import { UserProvider } from './UserContext';
+import { Provider } from 'react-redux';
+import { store } from './store';
 
 const features = [
   {
@@ -90,11 +91,11 @@ const AppContent = () => {
 
 function App() {
   return (
-    <UserProvider>
+    <Provider store={store}>
       <Router>
         <AppContent />
       </Router>
-    </UserProvider>
+    </Provider>
   );
 }
 

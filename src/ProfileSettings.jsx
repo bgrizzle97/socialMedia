@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Heart, MessageCircle, Share2 } from 'lucide-react';
-import { useUser } from './UserContext';
+import { useSelector, useDispatch } from 'react-redux';
+import { setUser } from './userSlice';
 
 const ProfileSettings = ({ onNavigate }) => {
-  const { user, setUser } = useUser();
+  const user = useSelector((state) => state.user.user);
+  const dispatch = useDispatch();
   const [form, setForm] = useState({
     username: '',
     email: '',
@@ -89,8 +91,7 @@ const ProfileSettings = ({ onNavigate }) => {
       if (res.ok) {
         setStatus('Profile updated successfully!');
         const data = await res.json();
-        // Update global user info
-        setUser(data.user);
+        dispatch(setUser(data.user));
       } else {
         setStatus('Failed to update profile.');
       }

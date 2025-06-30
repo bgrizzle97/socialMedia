@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react";
-import { useUser } from './UserContext';
+import { useDispatch } from 'react-redux';
+import { setUser } from './userSlice';
 
 function Login({ onNavigate }) {
-  const { setUser } = useUser();
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     email: "",
     password: ""
@@ -40,11 +41,8 @@ function Login({ onNavigate }) {
 
       if (response.ok) {
         setMessage({ type: "success", text: "Login successful! Redirecting..." });
-        
-        // Store user data and token in localStorage
-        setUser(data.user);
+        dispatch(setUser(data.user));
         localStorage.setItem('token', data.token);
-        
         setTimeout(() => {
           onNavigate('/dashboard');
         }, 2000);

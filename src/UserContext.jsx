@@ -1,3 +1,9 @@
+/*
+
+
+CAN DELETE, THIS IS LEFT IN HERE TO SHOWCASE THE CONVERSION TO REDUX FOR BETTER SCALABILITY
+
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 const UserContext = createContext();
@@ -27,4 +33,4 @@ export function UserProvider({ children }) {
 
 export function useUser() {
   return useContext(UserContext);
-} 
+} */

@@ -14,10 +14,12 @@ import {
   Bookmark,
   TrendingUp
 } from "lucide-react";
-import { useUser } from './UserContext';
+import { useSelector, useDispatch } from 'react-redux';
+import { setUser, clearUser } from './userSlice';
 
 function Dashboard({ onNavigate }) {
-  const { user, setUser } = useUser();
+  const user = useSelector((state) => state.user.user);
+  const dispatch = useDispatch();
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState("");
   const [isPosting, setIsPosting] = useState(false);
@@ -32,7 +34,6 @@ function Dashboard({ onNavigate }) {
   const BACKEND_URL = "http://localhost:5000";
 
   useEffect(() => {
-    // Remove localStorage logic for user
     if (!user) {
       onNavigate('/');
     }
@@ -81,6 +82,7 @@ function Dashboard({ onNavigate }) {
   const handleLogout = () => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    dispatch(clearUser());
     onNavigate('/');
   };
 
