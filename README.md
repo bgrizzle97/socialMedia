@@ -3,7 +3,7 @@
 A modern social platform built with React (frontend) and Node.js/Express/MongoDB (backend). Features include:
 
 - User authentication (sign up, login, JWT-based)
-- Global user state with React Context (profile and avatar always up-to-date)
+- Global user state with Redux Toolkit (profile and avatar always up-to-date)
 - Post status updates with text, images, or videos
 - Drag-and-drop and file picker for attachments
 - Video theatre mode for immersive playback
@@ -17,7 +17,8 @@ A modern social platform built with React (frontend) and Node.js/Express/MongoDB
 - **Theatre Mode:** Click the play overlay on a video to view it in a fullscreen modal
 - **UI:** Beautiful, responsive design with Tailwind CSS
 - **Password Reset:** Full password reset flow (request link, set new password)
-- **Profile Picture Sync:** Profile pictures update everywhere instantly after profile changes (using React Context)
+- **Profile Picture Sync:** Profile pictures update everywhere instantly after profile changes (using Redux Toolkit)
+- **Redux State Management:** User state is managed globally with Redux Toolkit for scalability and maintainability
 
 ## Getting Started
 
