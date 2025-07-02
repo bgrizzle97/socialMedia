@@ -5,6 +5,10 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const crypto = require('crypto');
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const GitHubStrategy = require('passport-github2').Strategy;
+const DiscordStrategy = require('passport-discord').Strategy;
 
 // Register new user
 router.post('/register', async (req, res) => {
@@ -259,6 +263,186 @@ router.post('/reset-password', async (req, res) => {
   await user.save();
 
   res.json({ message: 'Password has been reset successfully' });
+});
+
+// --- Friends System ---
+// Send a friend request
+router.post('/friends/request', authenticateToken, async (req, res) => {
+  const { toUserId } = req.body;
+  if (!toUserId) return res.status(400).json({ message: 'Recipient userId required' });
+  if (toUserId === req.user.userId) return res.status(400).json({ message: 'Cannot friend yourself' });
+  const fromUser = await User.findById(req.user.userId);
+  const toUser = await User.findById(toUserId);
+  if (!toUser) return res.status(404).json({ message: 'User not found' });
+  if (fromUser.friends.includes(toUserId)) return res.status(400).json({ message: 'Already friends' });
+  if (toUser.friendRequests.includes(fromUser._id)) return res.status(400).json({ message: 'Request already sent' });
+  toUser.friendRequests.push(fromUser._id);
+  await toUser.save();
+  res.json({ message: 'Friend request sent' });
+});
+
+// Accept a friend request
+router.post('/friends/accept', authenticateToken, async (req, res) => {
+  const { fromUserId } = req.body;
+  if (!fromUserId) return res.status(400).json({ message: 'Sender userId required' });
+  const user = await User.findById(req.user.userId);
+  const fromUser = await User.findById(fromUserId);
+  if (!fromUser) return res.status(404).json({ message: 'User not found' });
+  if (!user.friendRequests.includes(fromUserId)) return res.status(400).json({ message: 'No such friend request' });
+  // Add each other as friends
+  user.friends.push(fromUserId);
+  fromUser.friends.push(user._id);
+  // Remove the request
+  user.friendRequests = user.friendRequests.filter(id => id.toString() !== fromUserId);
+  await user.save();
+  await fromUser.save();
+  res.json({ message: 'Friend request accepted' });
+});
+
+// Decline a friend request
+router.post('/friends/decline', authenticateToken, async (req, res) => {
+  const { fromUserId } = req.body;
+  if (!fromUserId) return res.status(400).json({ message: 'Sender userId required' });
+  const user = await User.findById(req.user.userId);
+  if (!user.friendRequests.includes(fromUserId)) return res.status(400).json({ message: 'No such friend request' });
+  user.friendRequests = user.friendRequests.filter(id => id.toString() !== fromUserId);
+  await user.save();
+  res.json({ message: 'Friend request declined' });
+});
+
+// List friends
+router.get('/friends', authenticateToken, async (req, res) => {
+  const user = await User.findById(req.user.userId).populate('friends', 'fullName email profilePic');
+  res.json({ friends: user.friends });
+});
+
+// List incoming friend requests
+router.get('/friends/requests', authenticateToken, async (req, res) => {
+  const user = await User.findById(req.user.userId).populate('friendRequests', 'fullName email profilePic');
+  res.json({ requests: user.friendRequests });
+});
+
+// Search users (for adding friends)
+router.get('/search-users', authenticateToken, async (req, res) => {
+  const q = req.query.q?.trim();
+  if (!q) return res.json({ users: [] });
+  const user = await User.findById(req.user.userId);
+  // Exclude self, friends, and pending requests
+  const excludeIds = [user._id, ...user.friends, ...user.friendRequests].map(id => id.toString());
+  const regex = new RegExp(q, 'i');
+  const users = await User.find({
+    $and: [
+      { _id: { $nin: excludeIds } },
+      { $or: [ { fullName: regex }, { email: regex } ] }
+    ]
+  }).limit(10);
+  res.json({ users: users.map(u => ({
+    _id: u._id,
+    fullName: u.fullName,
+    email: u.email,
+    profilePic: u.profilePic
+  })) });
+});
+
+// Google OAuth setup
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID || 'GOOGLE_CLIENT_ID',
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET || 'GOOGLE_CLIENT_SECRET',
+  callbackURL: '/api/auth/google/callback',
+}, (accessToken, refreshToken, profile, done) => {
+  // Here you would find or create a user in your DB
+  // For now, just pass the profile
+  return done(null, profile);
+}));
+
+passport.serializeUser((user, done) => {
+  done(null, user);
+});
+passport.deserializeUser((obj, done) => {
+  done(null, obj);
+});
+
+// Google OAuth endpoints
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+
+router.get('/google/callback', passport.authenticate('google', { failureRedirect: '/' }), (req, res) => {
+  // Successful authentication
+  const user = req.user;
+  // Create a JWT for the user
+  const token = jwt.sign({
+    id: user.id,
+    displayName: user.displayName,
+    emails: user.emails,
+    provider: 'google'
+  }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '7d' });
+  // Redirect to frontend with token
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173/oauth-success';
+  res.redirect(`${frontendUrl}?token=${token}`);
+});
+
+// JWT authentication middleware
+function authenticateJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, user) => {
+      if (err) return res.sendStatus(403);
+      req.user = user;
+      next();
+    });
+  } else {
+    res.sendStatus(401);
+  }
+}
+
+// Example protected route
+router.get('/protected', authenticateJWT, (req, res) => {
+  res.json({ message: 'This is a protected route!', user: req.user });
+});
+
+// GitHub OAuth setup
+passport.use(new GitHubStrategy({
+  clientID: process.env.GITHUB_CLIENT_ID || 'GITHUB_CLIENT_ID',
+  clientSecret: process.env.GITHUB_CLIENT_SECRET || 'GITHUB_CLIENT_SECRET',
+  callbackURL: '/api/auth/github/callback',
+}, (accessToken, refreshToken, profile, done) => {
+  return done(null, profile);
+}));
+
+router.get('/github', passport.authenticate('github', { scope: ['user:email'] }));
+router.get('/github/callback', passport.authenticate('github', { failureRedirect: '/' }), (req, res) => {
+  const user = req.user;
+  const token = jwt.sign({
+    id: user.id,
+    displayName: user.displayName,
+    emails: user.emails,
+    provider: 'github'
+  }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '7d' });
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173/oauth-success';
+  res.redirect(`${frontendUrl}?token=${token}`);
+});
+
+// Discord OAuth setup
+passport.use(new DiscordStrategy({
+  clientID: process.env.DISCORD_CLIENT_ID || 'DISCORD_CLIENT_ID',
+  clientSecret: process.env.DISCORD_CLIENT_SECRET || 'DISCORD_CLIENT_SECRET',
+  callbackURL: '/api/auth/discord/callback',
+  scope: ['identify', 'email']
+}, (accessToken, refreshToken, profile, done) => {
+  return done(null, profile);
+}));
+
+router.get('/discord', passport.authenticate('discord'));
+router.get('/discord/callback', passport.authenticate('discord', { failureRedirect: '/' }), (req, res) => {
+  const user = req.user;
+  const token = jwt.sign({
+    id: user.id,
+    displayName: user.username,
+    emails: user.email ? [{ value: user.email }] : [],
+    provider: 'discord'
+  }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '7d' });
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173/oauth-success';
+  res.redirect(`${frontendUrl}?token=${token}`);
 });
 
 module.exports = router; 
